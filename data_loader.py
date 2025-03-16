@@ -1,48 +1,31 @@
 """
 
-Loads and preprocesses MLB betting odds and team performance data.
+Loads and preprocesses MLB team statistics and exports for Power BI.
 """
 
 import pandas as pd
 
 def load_data():
     """
-    Loads and merges betting odds with MLB game results and team stats.
+    Loads MLB 2019 team statistics data and exports it for visualization.
 
     Returns:
-        final_df (pd.DataFrame): Merged dataset.
+        df (pd.DataFrame): Processed dataset.
     """
-    # Load MLB betting odds
-    odds_df = pd.read_csv("oddsData.csv")
+    # Load dataset
+    df = pd.read_csv("2019teamstats.csv")
 
-    # Load Retrosheet data
-    gameinfo_2019 = pd.read_csv("2019gameinfo.csv")
-    teamstats_2019 = pd.read_csv("2019teamstats.csv")
-    gameinfo_2020 = pd.read_csv("2020gameinfo.csv")
-    teamstats_2020 = pd.read_csv("2020teamstats.csv")
-    gameinfo_2021 = pd.read_csv("2021gameinfo.csv")
-    teamstats_2021 = pd.read_csv("2021teamstats.csv")
+    # Select relevant stats
+    df = df[["team", "b_r", "b_h", "b_hr", "p_er", "win", "loss"]]
 
-    # Convert game dates (YYYYMMDD → YYYY-MM-DD)
-    for df in [gameinfo_2019, gameinfo_2020, gameinfo_2021]:
-        df["date"] = pd.to_datetime(df["date"], format='%Y%m%d').dt.strftime('%Y-%m-%d')
+    # Calculate win percentage
+    df["win_percentage"] = df["win"] / (df["win"] + df["loss"])
 
-    # Standardize Team Names
-    team_name_mapping = {"NYA": "NYY", "NYN": "NYM", "LAN": "LAD", "SFN": "SF", "CHA": "CHW", "CHN": "CHC"}
-    for df in [gameinfo_2019, gameinfo_2020, gameinfo_2021, teamstats_2019, teamstats_2020, teamstats_2021]:
-        df.replace({"team": team_name_mapping, "hometeam": team_name_mapping, "visteam": team_name_mapping}, inplace=True)
+    # Save cleaned data for Power BI
+    df.to_csv("mlb_analysis_powerbi.csv", index=False)
 
-    # Merge datasets
-    def merge_data(odds_df, gameinfo_df, teamstats_df):
-        merged_df = odds_df.merge(gameinfo_df, left_on=['date', 'team'], right_on=['date', 'hometeam'], how='inner')
-        merged_df = merged_df.merge(teamstats_df, on=['date', 'team'], how='inner')
-        return merged_df
+    print("✅ Data exported to 'mlb_analysis_powerbi.csv' for Power BI.")
+    return df
 
-    merged_2019 = merge_data(odds_df, gameinfo_2019, teamstats_2019)
-    merged_2020 = merge_data(odds_df, gameinfo_2020, teamstats_2020)
-    merged_2021 = merge_data(odds_df, gameinfo_2021, teamstats_2021)
-
-    # Combine all years
-    final_df = pd.concat([merged_2019, merged_2020, merged_2021], ignore_index=True)
-
-    return final_df
+if __name__ == "__main__":
+    load_data()
